@@ -1,6 +1,9 @@
 // The AXI contract, driven through the real binary.
 
 import { spawnSync } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -103,6 +106,29 @@ describe("a source that cannot be reached", () => {
     expect(r.status).toBe(1);
     expect(r.stdout).toContain("connectors");
     expect(r.stdout).toContain("crswd,required,down");
+  });
+});
+
+describe("an unbuilt checkout", () => {
+  it("names the build command instead of a module-resolver stack trace", () => {
+    // `npm install github:craig-ai-tooling/crswd-axi` ships no dist/ unless
+    // `prepare` runs, and a checkout nobody has built is an ordinary state.
+    // Measured before this was fixed: ERR_MODULE_NOT_FOUND naming a dist path.
+    const dir = mkdtempSync(join(tmpdir(), "crswd-axi-unbuilt-"));
+    try {
+      mkdirSync(join(dir, "bin"));
+      copyFileSync(bin, join(dir, "bin", "crswd-axi.js"));
+      const r = spawnSync("node", [join(dir, "bin", "crswd-axi.js"), "list"], {
+        encoding: "utf8",
+        env: SEALED,
+      });
+      expect(r.status).toBe(1);
+      expect(r.stdout).toContain("is not built");
+      expect(r.stdout).toContain("npm run build");
+      expect(r.stdout).not.toContain("ERR_MODULE_NOT_FOUND");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
