@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor this package declares, and what the box that runs it has.
+        # Testing only one of them means the other is a guess.
+        node: ["20", "22"]
+    steps:
+      # Pinned to a commit, not a tag: a tag can be moved under you.
+      # The tag it resolved to is in the comment so a human can still read it.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm run build
+      - run: npx vitest run
+      - run: npm run skill:check
+
+      # The compliance gate. It spawns the real binary and inspects stdout and
+      # exit codes, so unlike a source-string assertion it cannot stay green
+      # while the tool is broken. There is no crswd on the runner, which is the
+      # point of the run: the home view must still answer, and say so.
+      - run: npx -y axi-axi validate "node bin/crswd-axi.js" --dir . --timeout 30000
