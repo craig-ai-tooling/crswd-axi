@@ -57,10 +57,22 @@ suggestion: crswd answers one 404 for all of: unknown id, another caller's
 
 ## Install
 
+Pin to a tagged release, not `main` — an unpinned ref is a different build on
+every install and the one this repo already shipped once by accident (see
+`v0.1.0`'s "no dist" fix). `git ls-remote --tags` or the
+[releases page](https://github.com/craig-ai-tooling/crswd-axi/releases) has
+the current tag.
+
 ```sh
-npm install --prefix ~/.local/share/axi-tools github:craig-ai-tooling/crswd-axi
+npm install --prefix ~/.local/share/axi-tools github:craig-ai-tooling/crswd-axi#v0.1.0
 ln -sf ~/.local/share/axi-tools/node_modules/crswd-axi/bin/crswd-axi.js ~/.local/bin/crswd-axi
 ```
+
+`.github/workflows/release.yml` also attaches a prebuilt tarball
+(`crswd-axi-<version>.tgz`, `dist/` included) to each tagged release — useful
+where `npm install` from a git ref is undesirable, e.g. `gh release download
+v0.1.0 -R craig-ai-tooling/crswd-axi` followed by `npm install --prefix
+~/.local/share/axi-tools ./crswd-axi-0.1.0.tgz`.
 
 Then `crswd-axi doctor`.
 
