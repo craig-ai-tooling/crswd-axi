@@ -1,8 +1,8 @@
 // The store's whole job is not losing a credential that is handed over once.
 
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { capture, stores, tokenFor } from "../src/crswd/tokens.js";
 import { list } from "../src/crswd/sessions.js";
@@ -81,6 +81,22 @@ describe("the store", () => {
     writeFileSync(store, '{"id":"a","token":"good"}\n{"id":"b","tok\n');
     expect(tokenFor("a")).toBe("good");
     expect(tokenFor("b")).toBeUndefined();
+  });
+
+  it("creates the store 0600 and its directory 0700 even under a permissive umask", () => {
+    // Found 9/26/26: mkdirSync/appendFileSync with no mode left the bearer store
+    // 0664 in a 0775 dir under this box's umask 0002. A bearer is a live credential;
+    // group/world readable is wrong regardless of umask.
+    const prior = process.umask(0o002);
+    try {
+      const fresh = join(mkdtempSync(join(tmpdir(), "crswd-axi-test-")), "nested", "tokens.jsonl");
+      setVar("CRSWD_AXI_TOKENS", fresh);
+      capture([{ id: "a", token: "one" }]);
+      expect(statSync(fresh).mode & 0o777).toBe(0o600);
+      expect(statSync(dirname(fresh)).mode & 0o777).toBe(0o700);
+    } finally {
+      process.umask(prior);
+    }
   });
 });
 

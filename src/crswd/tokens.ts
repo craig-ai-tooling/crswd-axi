@@ -136,8 +136,8 @@ export function capture(minted: Minted[], nowIso?: string): number {
   let written = 0;
   for (const path of stores()) {
     try {
-      mkdirSync(dirname(path), { recursive: true });
-      appendFileSync(path, lines.join("\n") + "\n", "utf8");
+      mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+      appendFileSync(path, lines.join("\n") + "\n", { encoding: "utf8", mode: 0o600 });
       written += lines.length;
     } catch {
       // Named by `doctor`, not thrown here.
@@ -149,8 +149,8 @@ export function capture(minted: Minted[], nowIso?: string): number {
 /** Can the primary store be written? `doctor` asks; nothing else does. */
 export function storeWritable(path: string): string | undefined {
   try {
-    mkdirSync(dirname(path), { recursive: true });
-    appendFileSync(path, "", "utf8");
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    appendFileSync(path, "", { encoding: "utf8", mode: 0o600 });
     return undefined;
   } catch (err) {
     return err instanceof Error ? err.message : String(err);
